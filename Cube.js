@@ -79,25 +79,26 @@ Cube.prototype.initData = function() {
  * @return {[type]}            [description]
  */
 Cube.prototype.rotateClockWise = function(frontIndex) {
-    this.data[frontIndex].colors = this.getFrontRotateResult(frontIndex);
-    // 上下左右面转的结果
-    var rotateItems = this.getRotateItems(frontIndex);
-    this.setRotateItems(frontIndex, rotateItems);
+    this.rotateFront(frontIndex);
+    this.rotateFlank(frontIndex);
 };
 
-Cube.prototype.rotateAntiClockWise = function(frontIndex) {
-    this.data[frontIndex].colors = this.getFrontRotateResult(frontIndex,true);
-    // 上下左右面转的结果
-    var rotateItems = this.getRotateItems(frontIndex,true);
-    this.setRotateItems(frontIndex, rotateItems,true);
-};
 /**
- * [getFrontRotateResult 得到FrontColors转动后的结果]
+ * [rotateAntiClockWise 逆时针转某一面]
+ * @param  {int} frontIndex [前面的编号]
+ * @return {[type]}            [description]
+ */
+Cube.prototype.rotateAntiClockWise = function(frontIndex) {
+    this.rotateFront(frontIndex,true);
+    this.rotateFlank(frontIndex,true);
+};
+
+/**
+ * [rotateFront Front转动]
  * @param  {int} frontIndex [前面的编号]
  * @param {boolean} isAntiClock [是否逆时针]
- * @return {2DArray}            [FrontColors转动后的结果]
  */
-Cube.prototype.getFrontRotateResult = function(frontIndex,isAntiClock) {
+Cube.prototype.rotateFront = function(frontIndex,isAntiClock) {
     // 转的那面自身转的结果
     var frontColors = this.data[frontIndex].colors;
     var resultArr = create2DArray(this.n);
@@ -111,61 +112,55 @@ Cube.prototype.getFrontRotateResult = function(frontIndex,isAntiClock) {
             }
         }
     }
-    return resultArr;
+    this.data[frontIndex].colors=resultArr;
 };
 
-
-// Cube.prototype.getFlankItems = function(frontIndex) {
-    
-// };
-
-// Cube.prototype.rotateFlankItems = function(frontIndex) {
-        
-// };
-// Cube.prototype.setFlankItems = function(frontIndex) {
-//     // body...
-// };
 /**
- * [getRotateItems 得到跟着转的flank的转动信息]
- * @param  {int} frontIndex [description]
+ * [rotateFlank flank转动]
+ * @param  {int} frontIndex [前面的编号]
  * @param {boolean} isAntiClock [是否逆时针]
- * @return {Object}            [flank的转动信息]
  */
-// 方法实现有待重构
-Cube.prototype.getRotateItems = function(frontIndex,isAntiClock) {
+Cube.prototype.rotateFlank = function(frontIndex,isAntiClock) {
+    var rotateItems=this.getSideItems(frontIndex);
+    rotateItems=this.rotateSideItems(rotateItems,isAntiClock);
+    this.setSideItems(rotateItems);
+};
+/**
+ * [getSideItems 获取侧面要转动的信息]
+ * @param  {int} frontIndex [前面的编号]
+ * @return {Object}            [侧面要转动的信息]
+ */
+Cube.prototype.getSideItems = function(frontIndex) {
     var directionMap = this.directionMap;
     var front = this.data[frontIndex];
     var rotateItems = {
+        frontIndex:frontIndex,
         sideInfos: [],
         colors: []
     };
-    for (var k = 0; k < directionMap.length; k++) {
-        var frontDirect = directionMap[k];
-        var flankIndex = front[frontDirect];
-        var flank = this.data[flankIndex];
+    for (var k=0; k<directionMap.length; k++) {
+        var frontDirect=directionMap[k];
+        var flankIndex=front[frontDirect];
+        var flank=this.data[flankIndex];
         var flankDirect;
-        // 得到flankDirect
         for (var i = 0; i < directionMap.length; i++) {
             if (flank[directionMap[i]] === frontIndex) {
                 flankDirect = directionMap[i];
                 break;
             }
         }
-        var arr = [];
-        var isReverse = isAntiClock?true:false;
+        var arr=[];
         var flankColors = flank.colors;
         // 获取flankColors中转动的那一列/行
         if (flankDirect === 'up') {
             for (i = 0; i < this.n; i++) {
                 arr[i] = flankColors[0][i];
             }
-            isReverse = isAntiClock?false:true;
 
         } else if (flankDirect === 'right') {
             for (i = 0; i < this.n; i++) {
                 arr[i] = flankColors[i][2];
             }
-            isReverse = isAntiClock?false:true;
         } else if (flankDirect === 'down') {
             for (i = 0; i < this.n; i++) {
                 arr[i] = flankColors[2][i];
@@ -175,14 +170,10 @@ Cube.prototype.getRotateItems = function(frontIndex,isAntiClock) {
                 arr[i] = flankColors[i][0];
             }
         }
-        if (isReverse) {
-            arr = arr.reverse();
-        }
         var sideInfo = {
             flankIndex: flankIndex,
             flankDirect: flankDirect,
-            frontDirect: frontDirect,
-            isReverse: isReverse
+            frontDirect: frontDirect
         };
         rotateItems.sideInfos.push(sideInfo);
         rotateItems.colors.push(arr);
@@ -191,19 +182,26 @@ Cube.prototype.getRotateItems = function(frontIndex,isAntiClock) {
 };
 
 /**
- * [setRotateItems 修改data中的flankColors]
- * @param {int} frontIndex  [前面的编号]
- * @param {boolean} isAntiClock [是否逆时针]
- * @param {Object} rotateItems [flank的转动信息]
+ * [rotateSideItems 转动侧面]
+ * @param  {Object}  rotateItems [侧面要转动的信息]
+ * @param  {Boolean} isAntiClock [是否逆时针]
+ * @return {Object}              [侧面转动后的信息]
  */
-// 方法实现有待重构
-Cube.prototype.setRotateItems = function(frontIndex, rotateItems,isAntiClock) {
-    console.log(rotateItems);
-    var directionMapLen = this.directionMap.length;
-    var front = this.data[frontIndex];
-    var sideInfos = rotateItems.sideInfos;
-    var colors = rotateItems.colors;
-    // 获得转动后对应的color与side的关系
+Cube.prototype.rotateSideItems = function(rotateItems,isAntiClock) {
+    var frontIndex=rotateItems.frontIndex;
+    var sideInfos=rotateItems.sideInfos;
+    var colors=rotateItems.colors;
+    for (var k = 0; k < sideInfos.length; k++) {
+        var sideInfo=sideInfos[k];
+        var isReverse=isAntiClock?true:false;
+        if (sideInfo.flankDirect==='up'||sideInfo.flankDirect==='right') {
+            isReverse=!isReverse;
+        }
+        sideInfo.isReverse=isReverse;
+        if(isReverse){
+            colors[k].reverse();
+        }
+    }
     if(isAntiClock){
         var firstColor=colors.shift();
         colors.push(firstColor);
@@ -211,33 +209,45 @@ Cube.prototype.setRotateItems = function(frontIndex, rotateItems,isAntiClock) {
         var lastColor = colors.pop();
         colors.unshift(lastColor);
     }
-    for (var i = 0; i < sideInfos.length; i++) {
-        var sideInfo = sideInfos[i];
-        var flank = this.data[front[sideInfo.frontDirect]];
+    return rotateItems;
+};
+
+/**
+ * [setSideItems 设置data转动后侧面信息]
+ * @param {Object} rotateItems [侧面转动后的信息]
+ */
+Cube.prototype.setSideItems = function(rotateItems) {
+    var front = this.data[rotateItems.frontIndex];
+    var sideInfos=rotateItems.sideInfos;
+    var colors=rotateItems.colors;
+    for (var k = 0; k < sideInfos.length; k++) {
+        var sideInfo = sideInfos[k];
+        var flank = this.data[sideInfo.flankIndex];
         var flankColors = flank.colors;
         var flankDirect = sideInfo.flankDirect;
         var frontDirect = sideInfo.frontDirect;
         var isReverse = sideInfo.isReverse;
-        var color = colors[i];
+        var color = colors[k];
         if (isReverse) {
-            color = color.reverse();
+            color.reverse();
         }
+        var n=this.n;
         if (flankDirect === 'up') {
-            for (j = 0; j < this.n; j++) {
-                flankColors[0][j] = color[j];
+            for (i = 0; i < n; i++) {
+                flankColors[0][i] = color[i];
             }
 
         } else if (flankDirect === 'right') {
-            for (j = 0; j < this.n; j++) {
-                flankColors[j][2] = color[j];
+            for (i = 0; i < n; i++) {
+                flankColors[i][n-1] = color[i];
             }
         } else if (flankDirect === 'down') {
-            for (j = 0; j < this.n; j++) {
-                flankColors[2][j] = color[j];
+            for (i = 0; i < n; i++) {
+                flankColors[n-1][i] = color[i];
             }
         } else if (flankDirect === 'left') {
-            for (j = 0; j < this.n; j++) {
-                flankColors[j][0] = color[j];
+            for (i = 0; i < n; i++) {
+                flankColors[i][0] = color[i];
             }
         }
     }
@@ -261,5 +271,5 @@ Cube.prototype.logColors = function() {
 };
 
 var cube = new Cube(3);
-cube.rotateAntiClockWise(4);
+cube.rotateClockWise(4);
 cube.logColors();
