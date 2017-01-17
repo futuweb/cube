@@ -38,6 +38,11 @@ function create2DArray(n, initValue) {
     return arr;
 }
 Cube.prototype.directionMap = ['up', 'right', 'down', 'left'];
+
+/**
+ * [initData 初始化cube]
+ * @return {[type]} [description]
+ */
 Cube.prototype.initData = function() {
     //各面数组的初始化
     var side;
@@ -68,22 +73,66 @@ Cube.prototype.initData = function() {
     }
 };
 
-
+/**
+ * [rotateClockWise 顺时针转某一面]
+ * @param  {int} frontIndex [前面的编号]
+ * @return {[type]}            [description]
+ */
 Cube.prototype.rotateClockWise = function(frontIndex) {
+    this.data[frontIndex].colors = this.getFrontRotateResult(frontIndex);
+    // 上下左右面转的结果
+    var rotateItems = this.getRotateItems(frontIndex);
+    this.setRotateItems(frontIndex, rotateItems);
+};
+
+Cube.prototype.rotateAntiClockWise = function(frontIndex) {
+    this.data[frontIndex].colors = this.getFrontRotateResult(frontIndex,true);
+    // 上下左右面转的结果
+    var rotateItems = this.getRotateItems(frontIndex,true);
+    this.setRotateItems(frontIndex, rotateItems,true);
+};
+/**
+ * [getFrontRotateResult 得到FrontColors转动后的结果]
+ * @param  {int} frontIndex [前面的编号]
+ * @param {boolean} isAntiClock [是否逆时针]
+ * @return {2DArray}            [FrontColors转动后的结果]
+ */
+Cube.prototype.getFrontRotateResult = function(frontIndex,isAntiClock) {
     // 转的那面自身转的结果
     var frontColors = this.data[frontIndex].colors;
     var resultArr = create2DArray(this.n);
     for (var x = 0; x < this.n; x++) {
         for (var y = 0; y < this.n; y++) {
-            resultArr[y][2 - x] = frontColors[x][y];
+            var n=this.n-1;
+            if (isAntiClock) {
+                resultArr[n-y][x] = frontColors[x][y];
+            }else{
+                resultArr[y][n - x] = frontColors[x][y];
+            }
         }
     }
-    this.data[frontIndex].colors = resultArr;
-    // 上下左右面转的结果
-    var rotateItems = this.getRotateItems(frontIndex);
-    this.setRotateItems(frontIndex, rotateItems);
+    return resultArr;
 };
-Cube.prototype.getRotateItems = function(frontIndex) {
+
+
+// Cube.prototype.getFlankItems = function(frontIndex) {
+    
+// };
+
+// Cube.prototype.rotateFlankItems = function(frontIndex) {
+        
+// };
+// Cube.prototype.setFlankItems = function(frontIndex) {
+//     // body...
+// };
+/**
+ * [getRotateItems 得到跟着转的flank的转动信息]
+ * @param  {int} frontIndex [description]
+ * @param {boolean} isAntiClock [是否逆时针]
+ * @return {Object}            [flank的转动信息]
+ */
+// 方法实现有待重构
+Cube.prototype.getRotateItems = function(frontIndex,isAntiClock) {
     var directionMap = this.directionMap;
     var front = this.data[frontIndex];
     var rotateItems = {
@@ -95,27 +144,28 @@ Cube.prototype.getRotateItems = function(frontIndex) {
         var flankIndex = front[frontDirect];
         var flank = this.data[flankIndex];
         var flankDirect;
+        // 得到flankDirect
         for (var i = 0; i < directionMap.length; i++) {
             if (flank[directionMap[i]] === frontIndex) {
                 flankDirect = directionMap[i];
                 break;
             }
         }
-
         var arr = [];
-        var isReverse = false;
+        var isReverse = isAntiClock?true:false;
         var flankColors = flank.colors;
+        // 获取flankColors中转动的那一列/行
         if (flankDirect === 'up') {
             for (i = 0; i < this.n; i++) {
                 arr[i] = flankColors[0][i];
             }
-            isReverse = true;
+            isReverse = isAntiClock?false:true;
 
         } else if (flankDirect === 'right') {
             for (i = 0; i < this.n; i++) {
                 arr[i] = flankColors[i][2];
             }
-            isReverse = true;
+            isReverse = isAntiClock?false:true;
         } else if (flankDirect === 'down') {
             for (i = 0; i < this.n; i++) {
                 arr[i] = flankColors[2][i];
@@ -139,15 +189,28 @@ Cube.prototype.getRotateItems = function(frontIndex) {
     }
     return rotateItems;
 };
-Cube.prototype.setRotateItems = function(frontIndex, rotateItems) {
+
+/**
+ * [setRotateItems 修改data中的flankColors]
+ * @param {int} frontIndex  [前面的编号]
+ * @param {boolean} isAntiClock [是否逆时针]
+ * @param {Object} rotateItems [flank的转动信息]
+ */
+// 方法实现有待重构
+Cube.prototype.setRotateItems = function(frontIndex, rotateItems,isAntiClock) {
     console.log(rotateItems);
     var directionMapLen = this.directionMap.length;
     var front = this.data[frontIndex];
     var sideInfos = rotateItems.sideInfos;
     var colors = rotateItems.colors;
-    // 让colos的值转
-    var lastColor = colors.pop();
-    colors.unshift(lastColor);
+    // 获得转动后对应的color与side的关系
+    if(isAntiClock){
+        var firstColor=colors.shift();
+        colors.push(firstColor);
+    }else{
+        var lastColor = colors.pop();
+        colors.unshift(lastColor);
+    }
     for (var i = 0; i < sideInfos.length; i++) {
         var sideInfo = sideInfos[i];
         var flank = this.data[front[sideInfo.frontDirect]];
@@ -179,7 +242,11 @@ Cube.prototype.setRotateItems = function(frontIndex, rotateItems) {
         }
     }
 };
-// 1,4不对
+
+/**
+ * [logColors 打印各面的colors，调试用]
+ * @return {[type]} [description]
+ */
 Cube.prototype.logColors = function() {
     var sides = this.data;
     var n = this.n;
@@ -194,5 +261,5 @@ Cube.prototype.logColors = function() {
 };
 
 var cube = new Cube(3);
-cube.rotateClockWise(5);
+cube.rotateAntiClockWise(4);
 cube.logColors();
